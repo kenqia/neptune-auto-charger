@@ -23,7 +23,7 @@ MAX_CHARGE_TIME = 480  # 最大充电时长（分钟）
 BASE_URL = "http://www.szlzxn.cn"
 
 # 断电检测时间窗口
-# 检测 23:45 - 00:15 之间的断电记录
+# 检测 23:30 - 00:30 之间的断电记录
 POWER_OFF_WINDOW_START_HOUR = 23
 POWER_OFF_WINDOW_START_MINUTE = 30
 POWER_OFF_WINDOW_END_HOUR = 0
