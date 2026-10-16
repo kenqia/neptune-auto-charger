@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime, timedelta
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import main
 from config import BASE_URL, POWER_OFF_WINDOW_END_MINUTE
@@ -106,6 +106,30 @@ class TransportSecurityTest(unittest.TestCase):
     def test_api_base_url_uses_https(self):
         self.assertTrue(BASE_URL.startswith("https://"))
 
+
+
+class DryRunAndExitStatusTest(unittest.IsolatedAsyncioTestCase):
+    async def test_dry_run_never_calls_begin_charge(self):
+        session = FakeSession([{"portstatur": "000000000000"}])
+        record = record_at(datetime.now(main.TZ_BEIJING))
+        with patch.object(main, "find_power_off_record", return_value=record), \
+             patch.object(main, "begin_charge", new_callable=AsyncMock) as begin:
+            result, _ = await main.try_charge(session, dry_run=True)
+        self.assertEqual(result, main.ChargeResult.DRY_RUN)
+        begin.assert_not_awaited()
+        self.assertNotIn("beginCharge", [name for name, _ in session.requests])
+
+    async def test_preview_error_returns_nonzero_exit_status(self):
+        with patch.object(main, "validate_config", return_value=[]), \
+             patch.object(main, "try_charge", new_callable=AsyncMock,
+                          return_value=(main.ChargeResult.ERROR, "mock failure")):
+            self.assertEqual(await main.main(dry_run=True), 1)
+
+    async def test_no_record_returns_zero_exit_status(self):
+        with patch.object(main, "validate_config", return_value=[]), \
+             patch.object(main, "try_charge", new_callable=AsyncMock,
+                          return_value=(main.ChargeResult.NO_RECORD, "no matching record")):
+            self.assertEqual(await main.main(dry_run=True), 0)
 
 if __name__ == "__main__":
     unittest.main()

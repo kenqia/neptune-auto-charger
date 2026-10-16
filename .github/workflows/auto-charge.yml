@@ -1,12 +1,25 @@
 name: Neptune Auto Charge
 
 on:
-  # 定时运行：北京时间 6:05 = UTC 22:05（前一天）
+  # 定时运行：GitHub 使用 UTC；以下均为北京时间（次日）
   schedule:
-    - cron: '5 22 * * *'
+    - cron: '47 18 * * *' # 02:47 北京时间
+    - cron: '17 19 * * *' # 03:17 北京时间
+    - cron: '47 19 * * *' # 03:47 北京时间
+    - cron: '17 20 * * *' # 04:17 北京时间
+    - cron: '47 20 * * *' # 04:47 北京时间
+    - cron: '17 21 * * *' # 05:17 北京时间
+    - cron: '47 21 * * *' # 05:47 北京时间
+    - cron: '7 22 * * *'  # 06:07 北京时间
 
   # 支持手动触发（用于测试）
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '仅预览，不启动充电'
+        type: boolean
+        default: true
+        required: true
 
 jobs:
   auto-charge:
@@ -27,14 +40,17 @@ jobs:
 
       - name: Run tests
         run: |
-          python -m unittest test_ports.py test_charge_request.py test_charge_confirmation.py
-
-      - name: Create .env file
-        run: |
-          echo "NEPTUNE_OPEN_ID=${{ secrets.NEPTUNE_OPEN_ID }}" >> .env
-          echo "NEPTUNE_AREA_ID=${{ secrets.NEPTUNE_AREA_ID }}" >> .env
-          echo "NEPTUNE_EMPLOYEE_ID=${{ secrets.NEPTUNE_EMPLOYEE_ID }}" >> .env
+          python -m unittest discover -p "test_*.py"
 
       - name: Run auto charge script
+        env:
+          NEPTUNE_OPEN_ID: ${{ secrets.NEPTUNE_OPEN_ID }}
+          NEPTUNE_AREA_ID: ${{ secrets.NEPTUNE_AREA_ID }}
+          NEPTUNE_EMPLOYEE_ID: ${{ secrets.NEPTUNE_EMPLOYEE_ID }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
         run: |
-          python main.py
+          if [ "$DRY_RUN" = "true" ]; then
+            python main.py --dry-run
+          else
+            python main.py
+          fi
